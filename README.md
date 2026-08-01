@@ -54,7 +54,7 @@ StudyMate is a Java-based smart timetable generator that simplifies academic sch
    cd StudyMate--Smart-timetable-generator/StudyPlanner
    ```
 2. Import the database by running [`database.sql`](./database.sql) in MySQL Workbench.
-3. Set your MySQL username/password in `web/db.jsp` (or export `DB_USER` / `DB_PASSWORD` environment variables).
+3. Set your MySQL username/password via environment variables (`DB_USER`, `DB_PASSWORD`) — see [`.env.example`](./.env.example).
 4. Open the project in NetBeans, clean & build, then deploy to GlassFish and run.
 5. Visit `http://localhost:8080/StudyPlanner/`
 
