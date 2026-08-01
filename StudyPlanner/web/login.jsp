@@ -7,14 +7,13 @@ if(request.getParameter("login") != null) {
     String pass = request.getParameter("password");
 
     PreparedStatement ps = con.prepareStatement(
-        "SELECT * FROM users WHERE email=? AND password=?"
+        "SELECT * FROM users WHERE email=?"
     );
     ps.setString(1, email);
-    ps.setString(2, pass);
 
     ResultSet rs = ps.executeQuery();
 
-    if(rs.next()) {
+    if(rs.next() && util.PasswordUtil.verify(pass, rs.getString("password"))) {
         session.setAttribute("user_id", rs.getInt("user_id"));
         session.setAttribute("name", rs.getString("name"));
         response.sendRedirect("dashboard.jsp");

@@ -15,6 +15,6 @@ try {
     con = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
 
 } catch(Exception e) {
-    out.println("<h3 style='color:red'>DB Connection Error: " + e.getMessage() + "</h3>");
+    application.log("DB Connection Error", e);
 }
 %>
