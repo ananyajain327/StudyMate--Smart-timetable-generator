@@ -1,14 +1,14 @@
-CREATE DATABASE study_planner;
+CREATE DATABASE IF NOT EXISTS study_planner;
 USE study_planner;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     name    VARCHAR(100) NOT NULL,
     email   VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE subjects (
+CREATE TABLE IF NOT EXISTS subjects (
     subject_id   INT AUTO_INCREMENT PRIMARY KEY,
     user_id      INT NOT NULL,
     subject_name VARCHAR(100) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE subjects (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE study_plan (
+CREATE TABLE IF NOT EXISTS study_plan (
     plan_id     INT AUTO_INCREMENT PRIMARY KEY,
     user_id     INT NOT NULL,
     subject_id  INT NOT NULL,
