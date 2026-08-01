@@ -8,6 +8,13 @@
 [![Forks](https://img.shields.io/github/forks/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&logo=github&color=blue)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/forks)
 [![License](https://img.shields.io/github/license/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&color=green)](./LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&color=purple)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/commits/main)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-studymate.up.railway.app-00C7B7?style=for-the-badge&logo=vercel&logoColor=white)](https://studymate-live-production.up.railway.app)
+
+---
+
+## 🚀 Live Demo
+
+Try it live: **https://studymate-live-production.up.railway.app**
 
 ---
 
