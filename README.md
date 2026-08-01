@@ -9,6 +9,7 @@
 [![License](https://img.shields.io/github/license/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&color=green)](./LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&color=purple)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/commits/main)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-studymate.up.railway.app-00C7B7?style=for-the-badge&logo=vercel&logoColor=white)](https://studymate-live-production.up.railway.app)
+[![CI](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/actions/workflows/ci.yml)
 
 ---
 
@@ -31,6 +32,15 @@ StudyMate is a Java-based smart timetable generator that simplifies academic sch
 - Automatic timetable generation with configurable study hours
 - Today's plan view & task completion tracking
 - Dashboard with statistics (subjects, pending & completed tasks)
+
+---
+
+## 🔒 Security
+
+- **Password hashing** — PBKDF2 (HMAC-SHA256, 120k iterations, per-user salt); passwords are never stored in plain text.
+- **Session protection** — every protected page validates the logged-in session before serving content.
+- **No error leakage** — database errors are logged server-side; internal details are never printed to the page.
+- **Env-only credentials** — database credentials are injected via environment variables; no secrets are committed (the DB password is auto-generated at container start when not set).
 
 ---
 
