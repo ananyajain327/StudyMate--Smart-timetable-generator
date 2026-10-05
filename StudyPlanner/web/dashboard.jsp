@@ -42,6 +42,7 @@ if(rs3.next()) completedTasks = rs3.getInt(1);
     <div class="sidebar">
         <h2>StudyMate</h2>
         <a href="dashboard.jsp">Dashboard</a>
+        <a href="nextgen.jsp" style="background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.4);">⚡ Next-Gen AI Timetable</a>
         <a href="addSubject.jsp">Add Subject</a>
         <a href="viewSubjects.jsp">View Subjects</a>
         <a href="generatePlan.jsp">Generate Plan</a>

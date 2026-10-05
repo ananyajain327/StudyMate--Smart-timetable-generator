@@ -1,91 +1,107 @@
-# 📚 StudyMate — Smart Timetable Generator
+# 📚⚡ StudyMate AI — Next-Gen Smart Timetable Generator
 
-**Study smarter, not harder** — automatically generate personalised academic timetables from your subjects, priorities & exam dates.
+**Study smarter, not harder** — transformed into a living, reactive timetable engine that adapts instantly to delays, cognitive energy levels, and unexpected interruptions with zero user friction.
 
-[![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.java.com/)
-[![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
-[![Stars](https://img.shields.io/github/stars/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&logo=github&color=yellow)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator)
-[![Forks](https://img.shields.io/github/forks/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&logo=github&color=blue)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/forks)
 [![License](https://img.shields.io/github/license/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&color=green)](./LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/ananyajain327/StudyMate--Smart-timetable-generator?style=for-the-badge&color=purple)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/commits/main)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-studymate.up.railway.app-00C7B7?style=for-the-badge&logo=vercel&logoColor=white)](https://studymate-live-production.up.railway.app)
 [![CI](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/Node.js-v20+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.java.com/)
 
 ---
 
-## 🚀 Live Demo
+## ⚡ What's New in v2.0 AI Next-Gen
 
-Try it live: **https://studymate-live-production.up.railway.app**
+StudyMate v2.0 evolves from a static schedule generator into a **living, reactive cognitive timetable operating system**:
 
----
-
-## 📖 About
-
-StudyMate is a Java-based smart timetable generator that simplifies academic schedule management. Students add their subjects with priorities and exam dates, and StudyMate automatically builds a balanced study plan — distributing hours intelligently so every subject gets enough time before the exam.
-
----
-
-## ✨ Features
-
-- User registration & login
-- Add / edit / delete subjects with priority (High / Medium / Low) & exam dates
-- Automatic timetable generation with configurable study hours
-- Today's plan view & task completion tracking
-- Dashboard with statistics (subjects, pending & completed tasks)
-
----
-
-## 🔒 Security
-
-- **Password hashing** — PBKDF2 (HMAC-SHA256, 120k iterations, per-user salt); passwords are never stored in plain text.
-- **Session protection** — every protected page validates the logged-in session before serving content.
-- **No error leakage** — database errors are logged server-side; internal details are never printed to the page.
-- **Env-only credentials** — database credentials are injected via environment variables; no secrets are committed (the DB password is auto-generated at container start when not set).
+1. **⚡ Dynamic Cascade Engine ("Domino" Auto-Shift):**
+   - Single-click **"Running 30m Late"** (+15m, +30m, +45m, +60m) buttons.
+   - Automatically ripples future unlocked tasks forward while keeping fixed calendar events (lectures, exams, syncs) rock-solid and jumping over obstacles.
+2. **🧠 Cognitive Load & Chronotype Matching:**
+   - Tasks tagged by mental strain (**Deep Work**, **Shallow/Admin**, **Review**).
+   - Dynamically schedules deep focus into the user's natural peak windows (**Early Bird**, **Moderate**, **Night Owl**).
+3. **✂️ Smart Auto-Chunking & Spaced Allocation:**
+   - Massive tasks (e.g. "10-hour research project") automatically split into optimal 60–90 min focus blocks distributed across days before the deadline.
+4. **🔄 Context-Switching Minimizer:**
+   - Batches similar subjects/domain categories consecutively to eliminate attention residue and mental fatigue.
+5. **⌨️ Zero-Friction Natural Language Command Bar (`Ctrl+K` / `⌘K`):**
+   - Dump thoughts freely: *"Prep presentation 2h tomorrow before 4pm, high focus"* or *"Calculus problem set 90m today at 10am urgent"*.
+6. **📅 Two-Way Cal Sync & Transition Buffers:**
+   - Instant RFC 5545 `.ics` export/import for Google Calendar, Apple Calendar, and Outlook with automated 15m commute/prep buffers and conflict-highlighting shaders.
+7. **🎨 Minimalist Modern SaaS Aesthetics (Linear / Cron / Notion-style):**
+   - High-density dark/light themes, live current time marker with pulse, active task real-time progress meters, and magnetic 15-minute drag-and-drop snapping with duration stretch handles.
 
 ---
 
-## 🛠️ Tech Stack
+## 🏗️ Architecture & Component Decoupling
 
-| Layer      | Technology                  |
-|------------|-----------------------------|
-| Frontend   | HTML, CSS, JSP              |
-| Backend    | Java, JSP, JDBC             |
-| Database   | MySQL                       |
-| Server     | GlassFish / Apache Tomcat   |
-| IDE        | Apache NetBeans             |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- JDK 8+
-- Apache NetBeans IDE
-- GlassFish 5+ or Apache Tomcat
-- MySQL Server 8.x
-
-### Setup
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ananyajain327/StudyMate--Smart-timetable-generator.git
-   cd StudyMate--Smart-timetable-generator/StudyPlanner
-   ```
-2. Import the database by running [`database.sql`](./database.sql) in MySQL Workbench.
-3. Set your MySQL username/password via environment variables (`DB_USER`, `DB_PASSWORD`) — see [`.env.example`](./.env.example).
-4. Open the project in NetBeans, clean & build, then deploy to GlassFish and run.
-5. Visit `http://localhost:8080/StudyPlanner/`
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Open an [issue](https://github.com/ananyajain327/StudyMate--Smart-timetable-generator/issues) or submit a pull request. Please read the [Contributing Guidelines](./CONTRIBUTING.md).
+```
+studymate-repo/
+├── index.html                # Modern desktop/mobile SaaS reactive application
+├── css/
+│   └── app.css               # Design system, glassmorphic tokens, conflict shaders, themes
+├── js/
+│   ├── parser/
+│   │   └── nlpParser.js      # Natural Language & CMD+K command bar entity extractor
+│   ├── engine/
+│   │   ├── scheduler.js      # Chronotype solver, auto-chunker, context minimizer
+│   │   └── cascade.js        # Domino cascade engine with locked event immunity
+│   ├── canvas/
+│   │   └── timeline.js       # Magnetic drag-and-drop timeline with stretch handles
+│   ├── sync/
+│   │   └── calendarSync.js   # RFC 5545 iCal export/import & transition padding
+│   ├── state/
+│   │   └── store.js          # Optimistic reactive store with undo/redo & local persistence
+│   └── app.js                # App controller, keyboard shortcuts, metrics & toast feedback
+├── tests/                    # Comprehensive automated test suite (node:test)
+│   ├── nlpParser.test.js
+│   ├── scheduler.test.js
+│   ├── cascade.test.js
+│   └── calendarSync.test.js
+├── StudyPlanner/             # Legacy Java Tomcat web app with nextgen.jsp bridge
+│   └── web/
+│       ├── nextgen.jsp       # Embedded Next-Gen AI interface for Tomcat deployment
+│       └── dashboard.jsp     # Updated navigation
+└── database.sql              # Relational schema enriched with cognitive load & lock fields
+```
 
 ---
 
-## 📄 License
+## 🚀 Quick Start
 
-Distributed under the **MIT License**. See [LICENSE](./LICENSE).
+### Option A: Next-Gen Modern Web App (Recommended)
+
+Requires Node.js (v18+):
+
+```bash
+# 1. Clone repository
+git clone https://github.com/ananyajain327/StudyMate--Smart-timetable-generator.git
+cd StudyMate--Smart-timetable-generator
+
+# 2. Run automated test suite
+npm test
+
+# 3. Start local development server
+npm start
+# -> Open http://localhost:3000 in your browser!
+```
+
+### Option B: Classic Java / Tomcat Server
+
+1. Import `database.sql` into MySQL Server 8.x.
+2. Open `StudyPlanner/` in Apache NetBeans or deploy to Apache Tomcat 9+.
+3. Visit `http://localhost:8080/StudyPlanner/` and click **"⚡ Next-Gen AI Timetable"** in the sidebar.
+
+---
+
+## 🧪 Automated Testing
+
+Run the full suite of unit tests verifying NLP parsing, cognitive scheduling, domino cascade shift, and iCal sync:
+
+```bash
+npm test
+```
+
+All 16 core engine tests execute with native `node:test` in sub-second speed with zero third-party dependencies!
 
 ---
 
@@ -95,4 +111,4 @@ Distributed under the **MIT License**. See [LICENSE](./LICENSE).
 
 ---
 
-<div align="center">⭐ If you find this project helpful, give it a star!</div>
+<div align="center">⭐ If you find StudyMate AI helpful, give it a star!</div>

@@ -1,0 +1,153 @@
+<%@ include file="db.jsp" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+if(session.getAttribute("user_id") == null) {
+    response.sendRedirect("login.jsp");
+    return;
+}
+String name = (String)session.getAttribute("name");
+%>
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyMate Next-Gen — AI Automated Smart Timetable</title>
+  <link rel="stylesheet" href="../../css/app.css">
+  <style>
+    /* Bridge styling for JSP container */
+    .jsp-top-banner {
+      background: rgba(99, 102, 241, 0.15);
+      border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+      padding: 6px 24px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #c7d2fe;
+    }
+    .jsp-top-banner a {
+      color: #a5b4fc;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="jsp-top-banner">
+    <span>Logged in as <strong><%= name %></strong> • Next-Gen AI Timetable Engine</span>
+    <a href="dashboard.jsp">← Back to Classic Dashboard</a>
+  </div>
+
+  <!-- Top App Navigation & Productivity Metrics Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo-badge" title="StudyMate Next-Gen">⚡</div>
+      <div class="brand-titles">
+        <h1>StudyMate <span class="version-tag">AI v2.0</span></h1>
+        <p>Dynamic Cascade Engine &amp; Cognitive Chronotype Solver</p>
+      </div>
+    </div>
+
+    <!-- Live Cognitive & Productivity Metrics -->
+    <div class="metrics-group">
+      <div class="metric-pill" title="Total Deep Work time allocated today">
+        <span class="metric-label">🧠 Deep Focus</span>
+        <span class="metric-value" id="metricDeepWork">4.5h</span>
+      </div>
+      <div class="metric-pill" title="Total study duration vs daily capacity">
+        <span class="metric-label">⏱️ Study Hours</span>
+        <span class="metric-value" id="metricTotalHours">5.5h / 7.0h</span>
+      </div>
+      <div class="metric-pill" title="Domain / subject category context shifts">
+        <span class="metric-label">🔄 Context Shifts</span>
+        <span class="metric-value" id="metricContextSwitches">3 shifts</span>
+      </div>
+    </div>
+
+    <!-- Header Action Controls -->
+    <div class="header-actions">
+      <button class="btn btn-primary" id="rebalanceBtn" title="Auto-rebalance unlocked tasks to optimal focus windows">
+        ✨ Auto-Rebalance
+      </button>
+      <button class="btn btn-secondary" id="exportCalBtn" title="Export schedule to standard RFC 5545 iCal (.ics) format">
+        📅 Export iCal
+      </button>
+      <button class="btn btn-secondary" id="importCalBtn" title="Import external events from Google Calendar or Apple Calendar (.ics)">
+        📥 Import .ics
+      </button>
+      <button class="btn btn-secondary btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Mode">
+        🌙
+      </button>
+    </div>
+  </header>
+
+  <!-- Quick Domino Cascade & Chronotype Action Strip -->
+  <section class="action-strip">
+    <div class="domino-toolbar">
+      <span class="domino-label">⚡ Domino Auto-Shift:</span>
+      <button class="btn-chip" data-domino="15" title="Shift future unlocked tasks forward by 15 mins while preserving fixed events">+15m</button>
+      <button class="btn-chip btn-domino" data-domino="30" title="Shift future unlocked tasks forward by 30 mins while preserving fixed events">+30m Late</button>
+      <button class="btn-chip" data-domino="45" title="Shift future unlocked tasks forward by 45 mins while preserving fixed events">+45m</button>
+      <button class="btn-chip" data-domino="60" title="Shift future unlocked tasks forward by 60 mins while preserving fixed events">+60m</button>
+    </div>
+
+    <div class="view-toggles">
+      <!-- Chronotype Peak Focus Window Selector -->
+      <label for="chronotypeSelector" style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Chronotype:</label>
+      <select id="chronotypeSelector" class="btn-chip" style="font-family: var(--font-sans); outline: none;">
+        <option value="early_bird">🌅 Early Bird (Peak 8-11 AM)</option>
+        <option value="moderate" selected>☀️ Balanced (Peak 10-2 PM)</option>
+        <option value="night_owl">🌙 Night Owl (Peak 6-10 PM)</option>
+      </select>
+
+      <!-- Day / Week View Segmented Control -->
+      <div class="segmented-control" id="viewModeSegments">
+        <button class="segment-btn active" data-view="day">Day View</button>
+        <button class="segment-btn" data-view="week">Week View</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Zero-Friction Natural Language Command Bar (CMD+K / Ctrl+K) -->
+  <section class="command-bar-wrapper">
+    <form class="command-bar" id="commandForm">
+      <span class="command-icon">⚡</span>
+      <input type="text"
+             class="command-input"
+             id="commandInput"
+             placeholder='Type natural thought... e.g. "Prep presentation 2h tomorrow before 4pm, high focus" or "Running 30m late"'
+             autocomplete="off">
+      <span class="kbd-shortcut">Ctrl+K</span>
+      <button type="submit" class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;">Add to Schedule</button>
+    </form>
+
+    <!-- Quick Prompts / Examples -->
+    <div class="quick-prompts">
+      <span class="prompt-hint-label">Try NLP inputs:</span>
+      <button class="prompt-chip" data-prompt="Prep presentation 2h tomorrow before 4pm, high focus">
+        Prep presentation 2h tomorrow before 4pm, high focus
+      </button>
+      <button class="prompt-chip" data-prompt="Calculus problem set 90m today at 10am urgent">
+        Calculus problem set 90m today at 10am urgent
+      </button>
+      <button class="prompt-chip" data-prompt="Running 30m late">
+        Running 30m late
+      </button>
+      <button class="prompt-chip" data-prompt="10-hour research project due friday deep work">
+        10-hour research project due friday deep work
+      </button>
+      <button class="prompt-chip" data-prompt="Read chapter 4 45m tomorrow night shallow">
+        Read chapter 4 45m tomorrow night shallow
+      </button>
+    </div>
+  </section>
+
+  <!-- Interactive Timeline Canvas Container -->
+  <main id="timelineCanvasContainer" class="timeline-container"></main>
+
+  <!-- Module Script -->
+  <script type="module" src="../../js/app.js"></script>
+</body>
+</html>
