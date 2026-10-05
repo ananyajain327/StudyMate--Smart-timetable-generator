@@ -1,7 +1,7 @@
 {
   "name": "studymate-ai-timetable",
   "version": "2.0.0",
-  "description": "Next-Generation AI/Automated Smart Timetable Generator with Dynamic Domino Cascade & Cognitive Chronotype Optimization",
+  "description": "Streamlined Smart Timetable Generator with Fixed Class Locking, Automated Free-Slot Detection, and Priority-Based To-Do Fitting",
   "type": "module",
   "main": "index.html",
   "scripts": {
@@ -11,12 +11,10 @@
   },
   "keywords": [
     "timetable",
-    "scheduler",
-    "chronotype",
-    "cognitive-load",
-    "ai-scheduler",
-    "domino-cascade",
-    "ical-sync"
+    "free-slot-detection",
+    "priority-scheduler",
+    "study-planner",
+    "college-schedule"
   ],
   "author": "Ananya Jain",
   "license": "MIT"
