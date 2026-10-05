@@ -1,11 +1,15 @@
 /**
- * Main Application Controller for StudyMate Next-Gen
- * Wires the Reactive Store, NLP Command Bar, Domino Toolbar, Metrics, and Timeline Canvas.
+ * Main Controller for StudyMate 3-Step Timetable Pipeline
+ * Step 1: Fixed College/School Timetable Input (Locked Slots)
+ * Step 2: Automated Free-Slot Identification (Live sync)
+ * Step 3: To-Do / Subject Priority Panel & 1-Click Auto-Fit Engine
  */
 
 import { AppStore } from './state/store.js';
 import { TimelineCanvas } from './canvas/timeline.js';
-import { CHRONOTYPES } from './engine/scheduler.js';
+import { FreeSlotDetector } from './engine/freeSlotDetector.js';
+import { AutoFitEngine } from './engine/autoFitEngine.js';
+import { CalendarSync } from './sync/calendarSync.js';
 
 export class StudyMateApp {
   constructor() {
@@ -16,254 +20,281 @@ export class StudyMateApp {
   }
 
   init() {
-    // 1. Initialize Canvas
-    const canvasContainer = document.getElementById('timelineCanvasContainer');
+    // 1. Calculate free slots immediately on startup
+    this.recalculateFreeSlots(false);
+
+    // 2. Initialize Canvas
+    const canvasContainer = document.getElementById('timetableCanvasContainer');
     if (canvasContainer) {
       this.timelineCanvas = new TimelineCanvas(canvasContainer, this.store);
     }
 
-    // 2. Set theme attribute
-    document.documentElement.setAttribute('data-theme', this.store.getState().userProfile.theme || 'dark');
-
-    // 3. Setup UI interactions
-    this.setupCommandBar();
-    this.setupDominoActions();
-    this.setupViewControls();
+    // 3. Setup User Interactions
+    this.setupClassInputs();
+    this.setupTaskInputs();
+    this.setupGeneratorActions();
     this.setupHeaderActions();
-    this.setupKeyboardShortcuts();
 
     // 4. Subscribe to Store updates
     this.store.subscribe((state, event) => {
-      this.updateMetrics();
-      this.syncControls();
+      if (event === 'class_added' || event === 'class_removed' || event === 'classes_cleared' || event === 'reset') {
+        this.recalculateFreeSlots(false);
+      }
+      this.renderSidebarData();
       if (this.timelineCanvas) {
         this.timelineCanvas.render();
       }
     });
 
-    // Initial render of metrics
-    this.updateMetrics();
-    this.syncControls();
+    // 5. Initial render of sidebar data
+    this.renderSidebarData();
   }
 
-  setupCommandBar() {
-    const input = document.getElementById('commandInput');
-    const form = document.getElementById('commandForm');
-    const chips = document.querySelectorAll('.prompt-chip');
+  /**
+   * Step 2: Automated Free-Slot Identification
+   */
+  recalculateFreeSlots(notify = true) {
+    const state = this.store.getState();
+    const freeSlots = FreeSlotDetector.detectFreeSlots(state.classes, {
+      dayStart: state.settings.dayStart || '08:00',
+      dayEnd: state.settings.dayEnd || '22:00',
+      activeDays: state.settings.activeDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    });
 
-    if (form && input) {
+    if (notify) {
+      this.store.setFreeSlots(freeSlots);
+    } else {
+      state.freeSlots = freeSlots;
+    }
+  }
+
+  setupClassInputs() {
+    const form = document.getElementById('addClassForm');
+    if (form) {
       form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const val = input.value.trim();
-        if (val) {
-          const res = this.store.executeNaturalLanguageInput(val);
-          input.value = '';
-          this.showFeedbackToast(res.success ? '✨ Schedule updated!' : (res.message || 'Action executed'));
+        const title = document.getElementById('classTitleInput').value.trim();
+        const day = document.getElementById('classDaySelect').value;
+        const startTime = document.getElementById('classStartInput').value;
+        const endTime = document.getElementById('classEndInput').value;
+        const room = document.getElementById('classRoomInput').value.trim();
+
+        if (title && startTime && endTime) {
+          this.store.addClass({ title, day, startTime, endTime, room });
+          document.getElementById('classTitleInput').value = '';
+          document.getElementById('classRoomInput').value = '';
+          this.showFeedbackToast(`🔒 Fixed class "${title}" added to ${day}!`);
         }
       });
     }
 
-    chips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        if (input) {
-          input.value = chip.dataset.prompt || chip.innerText.trim();
-          input.focus();
-        }
-      });
-    });
-  }
-
-  setupDominoActions() {
-    const dominoContainer = document.querySelector('.domino-toolbar');
-    if (dominoContainer) {
-      dominoContainer.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-domino]');
+    // Class list delegate delete
+    const classList = document.getElementById('classesListContainer');
+    if (classList) {
+      classList.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-delete-class]');
         if (btn) {
-          const mins = parseInt(btn.dataset.domino, 10);
-          const res = this.store.triggerDominoShift(mins);
-          this.showFeedbackToast(`⚡ Domino shifted future tasks by ${mins}m (${res.shiftedCount} shifted)`);
+          const id = btn.dataset.deleteClass;
+          this.store.removeClass(id);
+          this.showFeedbackToast('Class removed.');
         }
       });
     }
   }
 
-  setupViewControls() {
-    // Day vs Week view
-    const viewGroup = document.getElementById('viewModeSegments');
-    if (viewGroup) {
-      viewGroup.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-view]');
-        if (btn) {
-          this.store.setViewMode(btn.dataset.view);
+  setupTaskInputs() {
+    const form = document.getElementById('addTaskForm');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('taskNameInput').value.trim();
+        const durationMinutes = parseInt(document.getElementById('taskDurationSelect').value, 10);
+        const priority = document.getElementById('taskPrioritySelect').value;
+
+        if (name) {
+          this.store.addTask({ name, durationMinutes, priority });
+          document.getElementById('taskNameInput').value = '';
+          this.showFeedbackToast(`✨ Task added: ${name} (${priority} Priority)`);
         }
       });
     }
 
-    // Chronotype Selector
-    const chronoSelect = document.getElementById('chronotypeSelector');
-    if (chronoSelect) {
-      chronoSelect.addEventListener('change', (e) => {
-        this.store.setChronotype(e.target.value);
-        this.showFeedbackToast(`🧠 Chronotype set to ${e.target.value.replace('_', ' ').toUpperCase()}`);
+    // Task list actions (delete or toggle)
+    const taskList = document.getElementById('tasksListContainer');
+    if (taskList) {
+      taskList.addEventListener('click', (e) => {
+        const delBtn = e.target.closest('[data-delete-task]');
+        if (delBtn) {
+          const id = delBtn.dataset.deleteTask;
+          this.store.removeTask(id);
+          this.showFeedbackToast('Task removed.');
+          return;
+        }
+
+        const check = e.target.closest('[data-toggle-task]');
+        if (check) {
+          const id = check.dataset.toggleTask;
+          this.store.toggleTaskComplete(id);
+        }
+      });
+    }
+  }
+
+  /**
+   * Step 3: 1-Click Generator & Clear Actions
+   */
+  setupGeneratorActions() {
+    const fillBtn = document.getElementById('fillFreeTimeBtn');
+    if (fillBtn) {
+      fillBtn.addEventListener('click', () => {
+        const state = this.store.getState();
+        if (!state.tasks.length) {
+          alert('Please add at least one study task before filling free time!');
+          return;
+        }
+
+        // Run priority-based auto fit engine
+        const result = AutoFitEngine.fitTasks(state.tasks, state.freeSlots);
+        this.store.setScheduledStudySlots(result.scheduledStudySlots);
+
+        const msg = `⚡ Scheduled ${result.stats.allocatedCount} study blocks (${result.stats.totalScheduledHours}h)!`;
+        this.showFeedbackToast(msg);
+      });
+    }
+
+    const clearPlanBtn = document.getElementById('clearStudyPlanBtn');
+    if (clearPlanBtn) {
+      clearPlanBtn.addEventListener('click', () => {
+        this.store.clearStudyPlan();
+        this.showFeedbackToast('🧹 Study plan cleared. College timetable remains intact!');
       });
     }
   }
 
   setupHeaderActions() {
-    // Rebalance / Auto-Schedule
-    const rebalanceBtn = document.getElementById('rebalanceBtn');
-    if (rebalanceBtn) {
-      rebalanceBtn.addEventListener('click', () => {
-        this.store.rebalanceSchedule();
-        this.showFeedbackToast('🎯 Timetable dynamically optimized & cognitive-matched!');
+    // Reset to Demo
+    const resetBtn = document.getElementById('resetDemoBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Reset schedule to college demo state?')) {
+          this.store.resetToDemo();
+          this.showFeedbackToast('🔄 Reset to demo college timetable.');
+        }
       });
     }
 
     // Export iCal (.ics)
-    const exportBtn = document.getElementById('exportCalBtn');
+    const exportBtn = document.getElementById('exportIcsBtn');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
-        const icsData = this.store.exportToICS();
-        this.downloadFile('studymate_schedule.ics', icsData, 'text/calendar');
-        this.showFeedbackToast('📅 iCal (.ics) exported successfully!');
-      });
-    }
+        const state = this.store.getState();
+        const allSlots = [
+          ...state.classes.map(c => ({
+            id: c.id,
+            title: `[Class] ${c.title}`,
+            date: '2026-10-06',
+            startTime: c.startTime,
+            endTime: c.endTime,
+            category: 'College',
+            priority: 'High',
+            isLocked: true
+          })),
+          ...state.scheduledStudySlots.map(s => ({
+            id: s.id,
+            title: `[Study] ${s.taskName}`,
+            date: '2026-10-06',
+            startTime: s.startTime,
+            endTime: s.endTime,
+            category: 'Study',
+            priority: s.priority,
+            isLocked: false
+          }))
+        ];
 
-    // Import iCal Modal
-    const importBtn = document.getElementById('importCalBtn');
-    if (importBtn) {
-      importBtn.addEventListener('click', () => {
-        this.openImportModal();
-      });
-    }
-
-    // Dark / Light Theme Toggle
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    if (themeToggleBtn) {
-      themeToggleBtn.addEventListener('click', () => {
-        const cur = this.store.getState().userProfile.theme || 'dark';
-        const next = cur === 'dark' ? 'light' : 'dark';
-        this.store.setTheme(next);
-        document.documentElement.setAttribute('data-theme', next);
-        themeToggleBtn.innerText = next === 'dark' ? '🌙' : '☀️';
+        const icsData = CalendarSync.exportToICS(allSlots, 'StudyMate Timetable');
+        this.downloadFile('studymate_timetable.ics', icsData, 'text/calendar');
+        this.showFeedbackToast('📅 iCal exported successfully!');
       });
     }
   }
 
-  setupKeyboardShortcuts() {
-    window.addEventListener('keydown', (e) => {
-      // CMD+K or Ctrl+K opens/focuses Command Bar
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        const input = document.getElementById('commandInput');
-        if (input) {
-          input.focus();
-          input.select();
-        }
-      }
-
-      // Undo: Ctrl+Z / Cmd+Z
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-        if (this.store.undo()) {
-          this.showFeedbackToast('↩️ Undone');
-        }
-      }
-
-      // Redo: Ctrl+Y / Cmd+Shift+Z
-      if (((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') ||
-          ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
-        if (this.store.redo()) {
-          this.showFeedbackToast('↪️ Redone');
-        }
-      }
-    });
-  }
-
-  updateMetrics() {
-    const state = this.store.getState();
-    const todaySlots = state.slots.filter(s => s.date === state.selectedDate);
-
-    // 1. Total Deep Work Minutes
-    let deepWorkMins = 0;
-    let totalStudyMins = 0;
-    let contextSwitches = 0;
-    let prevCategory = null;
-
-    todaySlots.forEach(s => {
-      const dur = s.duration || (s.endMinutes - s.startMinutes);
-      totalStudyMins += dur;
-      if (s.energyLevel === 'deep') deepWorkMins += dur;
-
-      if (prevCategory && s.category !== prevCategory) {
-        contextSwitches++;
-      }
-      prevCategory = s.category;
-    });
-
-    const deepHours = (deepWorkMins / 60).toFixed(1);
-    const totalHours = (totalStudyMins / 60).toFixed(1);
-
-    const deepWorkEl = document.getElementById('metricDeepWork');
-    if (deepWorkEl) deepWorkEl.innerText = `${deepHours}h`;
-
-    const totalHoursEl = document.getElementById('metricTotalHours');
-    if (totalHoursEl) totalHoursEl.innerText = `${totalHours}h / ${state.userProfile.maxStudyHoursPerDay}h`;
-
-    const switchesEl = document.getElementById('metricContextSwitches');
-    if (switchesEl) switchesEl.innerText = `${contextSwitches} shifts`;
-  }
-
-  syncControls() {
+  renderSidebarData() {
     const state = this.store.getState();
 
-    // Sync View Segments active state
-    document.querySelectorAll('[data-view]').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === state.viewMode);
-    });
-
-    // Sync Chronotype select
-    const chronoSelect = document.getElementById('chronotypeSelector');
-    if (chronoSelect) {
-      chronoSelect.value = state.userProfile.chronotype || CHRONOTYPES.MODERATE;
-    }
-  }
-
-  openImportModal() {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Import Calendar (.ics)</h3>
-          <button class="modal-close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">
-            Paste an iCalendar (.ics) string from Google Calendar or Apple Calendar to import your locked events with automated commute/transition buffers.
-          </p>
-          <textarea id="icsInput" placeholder="BEGIN:VCALENDAR..."></textarea>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary modal-cancel">Cancel</button>
-          <button class="btn btn-primary modal-confirm">Import Events</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const close = () => overlay.remove();
-    overlay.querySelector('.modal-close-btn').addEventListener('click', close);
-    overlay.querySelector('.modal-cancel').addEventListener('click', close);
-
-    overlay.querySelector('.modal-confirm').addEventListener('click', () => {
-      const text = overlay.querySelector('#icsInput').value.trim();
-      if (text) {
-        const count = this.store.importICS(text);
-        this.showFeedbackToast(`📅 Imported ${count} calendar events!`);
+    // 1. Classes List
+    const classesContainer = document.getElementById('classesListContainer');
+    if (classesContainer) {
+      if (!state.classes.length) {
+        classesContainer.innerHTML = '<div class="empty-state">No classes added yet.</div>';
+      } else {
+        classesContainer.innerHTML = state.classes.map(cls => `
+          <div class="sidebar-item class-item">
+            <div class="item-main">
+              <span class="item-title">${cls.title}</span>
+              <span class="item-sub">${cls.day} • ${cls.startTime} - ${cls.endTime} ${cls.room ? '(' + cls.room + ')' : ''}</span>
+            </div>
+            <button class="item-del-btn" data-delete-class="${cls.id}" title="Delete class">&times;</button>
+          </div>
+        `).join('');
       }
-      close();
-    });
+    }
+
+    // 2. Free Slots Summary
+    const freeSlotsSummary = document.getElementById('freeSlotsSummary');
+    if (freeSlotsSummary) {
+      const totalFreeMinutes = state.freeSlots.reduce((acc, s) => acc + s.durationMinutes, 0);
+      const totalHours = (totalFreeMinutes / 60).toFixed(1);
+      freeSlotsSummary.innerHTML = `
+        <div class="free-summary-pill">
+          <strong>${state.freeSlots.length}</strong> unoccupied windows found (<strong>${totalHours}h</strong> total free time)
+        </div>
+        <div class="free-slots-scroll">
+          ${state.freeSlots.slice(0, 8).map(slot => `
+            <span class="free-slot-chip">${slot.label}</span>
+          `).join('')}
+          ${state.freeSlots.length > 8 ? `<span class="free-slot-chip more">+${state.freeSlots.length - 8} more</span>` : ''}
+        </div>
+      `;
+    }
+
+    // 3. Tasks List
+    const tasksContainer = document.getElementById('tasksListContainer');
+    if (tasksContainer) {
+      if (!state.tasks.length) {
+        tasksContainer.innerHTML = '<div class="empty-state">No study tasks in queue.</div>';
+      } else {
+        tasksContainer.innerHTML = state.tasks.map(task => `
+          <div class="sidebar-item task-item priority-${task.priority.toLowerCase()} ${task.completed ? 'is-completed' : ''}">
+            <input type="checkbox"
+                   class="task-check"
+                   ${task.completed ? 'checked' : ''}
+                   data-toggle-task="${task.id}"
+                   title="Toggle complete">
+            <div class="item-main">
+              <span class="item-title">${task.name}</span>
+              <span class="item-sub">${task.durationMinutes}m • ${task.priority} Priority</span>
+            </div>
+            <button class="item-del-btn" data-delete-task="${task.id}" title="Delete task">&times;</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 4. Header Metrics
+    const metricClasses = document.getElementById('metricClassesCount');
+    if (metricClasses) metricClasses.innerText = `${state.classes.length} Classes`;
+
+    const metricFree = document.getElementById('metricFreeHours');
+    if (metricFree) {
+      const freeMins = state.freeSlots.reduce((acc, s) => acc + s.durationMinutes, 0);
+      metricFree.innerText = `${(freeMins / 60).toFixed(1)}h Free`;
+    }
+
+    const metricStudy = document.getElementById('metricStudyCount');
+    if (metricStudy) {
+      const studyMins = state.scheduledStudySlots.reduce((acc, s) => acc + s.durationMinutes, 0);
+      metricStudy.innerText = `${state.scheduledStudySlots.length} Study Slots (${(studyMins / 60).toFixed(1)}h)`;
+    }
   }
 
   downloadFile(filename, content, mimeType) {
@@ -281,34 +312,18 @@ export class StudyMateApp {
   }
 
   showFeedbackToast(message) {
-    const existing = document.querySelector('.feedback-toast');
+    const existing = document.querySelector('.toast-banner');
     if (existing) existing.remove();
 
     const toast = document.createElement('div');
-    toast.className = 'feedback-toast';
+    toast.className = 'toast-banner';
     toast.innerText = message;
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-medium);
-      color: var(--text-primary);
-      padding: 10px 18px;
-      border-radius: var(--radius-md);
-      font-size: 13px;
-      font-weight: 600;
-      box-shadow: var(--shadow-lg);
-      z-index: 1000;
-      animation: fadeIn 0.2s ease-out;
-    `;
-
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+    setTimeout(() => toast.remove(), 3000);
   }
 }
 
-// Bootstrap application on DOM ready
+// Bootstrap on DOM loaded
 document.addEventListener('DOMContentLoaded', () => {
   window.studyMateApp = new StudyMateApp();
 });

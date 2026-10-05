@@ -1,29 +1,21 @@
 /**
- * Interactive Timeline Canvas for StudyMate Next-Gen
- * Features:
- * 1. Day / Week Multi-Day Timeline Canvas
- * 2. Magnetic 15-minute grid snapping
- * 3. Fluid drag-and-drop & visual duration stretching
- * 4. Real-time active block progress meters
- * 5. Conflict-highlighting shaders
- * 6. Live current-time marker with pulse indicator
+ * Unified Timetable Canvas for StudyMate
+ * Renders the clean weekly 8:00 AM – 10:00 PM timetable grid displaying:
+ * 1. Fixed College Classes (Solid, muted slate grey/blue, read-only/locked)
+ * 2. Auto-Generated Study Slots (Vibrant readable priority badges, completion toggle)
+ * 3. Unoccupied Remaining Time (Clean whitespace with subtle dashed borders)
  */
 
-import { Scheduler } from '../engine/scheduler.js';
-import { CalendarSync } from '../sync/calendarSync.js';
+import { FreeSlotDetector } from '../engine/freeSlotDetector.js';
 
 export class TimelineCanvas {
   constructor(containerElement, store) {
     this.container = containerElement;
     this.store = store;
 
-    // Visual scale: 80 pixels per hour = 1.3333 pixels per minute
-    this.pixelsPerHour = 80;
+    // Visual scale: 60px per hour = 1px per minute
+    this.pixelsPerHour = 60;
     this.pixelsPerMinute = this.pixelsPerHour / 60;
-    this.gridSnapMinutes = 15;
-
-    // Drag / Resize state
-    this.dragState = null;
 
     this.init();
   }
@@ -31,98 +23,50 @@ export class TimelineCanvas {
   init() {
     this.render();
     this.setupEventListeners();
-    this.startLiveTicker();
-  }
-
-  startLiveTicker() {
-    // Update live now line and active block progress every 15 seconds
-    this.tickerInterval = setInterval(() => {
-      this.updateNowIndicator();
-      this.updateActiveBlockProgress();
-    }, 15000);
-  }
-
-  destroy() {
-    if (this.tickerInterval) {
-      clearInterval(this.tickerInterval);
-    }
   }
 
   render() {
     const state = this.store.getState();
-    const { slots, viewMode, selectedDate, userProfile } = state;
+    const { classes, scheduledStudySlots, freeSlots, settings } = state;
 
-    const wakeMins = Scheduler.timeToMinutes(userProfile.wakeTime || '07:00');
-    const sleepMins = Scheduler.timeToMinutes(userProfile.sleepTime || '23:30');
-    const startHour = Math.max(0, Math.floor(wakeMins / 60) - 1);
-    const endHour = Math.min(24, Math.ceil(sleepMins / 60) + 1);
-    const totalHours = endHour - startHour;
+    const startMin = FreeSlotDetector.timeToMinutes(settings.dayStart || '08:00');
+    const endMin = FreeSlotDetector.timeToMinutes(settings.dayEnd || '22:00');
+    const totalHours = (endMin - startMin) / 60;
     const canvasHeight = totalHours * this.pixelsPerHour;
-
-    const conflictMap = CalendarSync.detectConflicts(slots);
-
-    // Compute dates to display based on viewMode
-    const datesToDisplay = [];
-    if (viewMode === 'day') {
-      datesToDisplay.push(selectedDate);
-    } else {
-      // 7-day week view starting from selectedDate (or Monday of that week)
-      const base = new Date(selectedDate + 'T00:00:00');
-      const dayOfWeek = base.getDay();
-      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(base);
-      monday.setDate(base.getDate() + mondayOffset);
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        datesToDisplay.push(`${y}-${m}-${day}`);
-      }
-    }
+    const activeDays = settings.activeDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
     this.container.innerHTML = `
-      <div class="timeline-wrapper ${viewMode}-view" style="--canvas-height: ${canvasHeight}px;">
-        <div class="timeline-header-row">
-          <div class="time-gutter-header">Time (24h)</div>
+      <div class="unified-timetable" style="--canvas-height: ${canvasHeight}px;">
+        <!-- Header Row with Day Names -->
+        <div class="timetable-header-row">
+          <div class="time-col-header">Time</div>
           <div class="days-header-group">
-            ${datesToDisplay.map(dStr => {
-              const dt = new Date(dStr + 'T00:00:00');
-              const isToday = dStr === new Date().toISOString().split('T')[0];
-              const isSelected = dStr === selectedDate;
-              const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' });
-              const dayNum = dt.getDate();
-              return `
-                <div class="day-col-header ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" data-date="${dStr}">
-                  <span class="day-name">${dayName}</span>
-                  <span class="day-num">${dayNum}</span>
-                  ${isToday ? '<span class="today-pill">Today</span>' : ''}
-                </div>
-              `;
-            }).join('')}
+            ${activeDays.map(day => `
+              <div class="day-col-header" data-day="${day}">
+                <span class="day-title">${day}</span>
+              </div>
+            `).join('')}
           </div>
         </div>
 
-        <div class="timeline-body">
-          <!-- Left Time Gutter -->
-          <div class="time-gutter" style="height: ${canvasHeight}px;">
+        <div class="timetable-body">
+          <!-- Left Time Axis (8:00 AM to 10:00 PM) -->
+          <div class="time-axis" style="height: ${canvasHeight}px;">
             ${Array.from({ length: totalHours + 1 }).map((_, idx) => {
-              const hour = startHour + idx;
+              const currentMin = startMin + idx * 60;
               const topPx = idx * this.pixelsPerHour;
-              const timeLabel = `${String(hour).padStart(2, '0')}:00`;
+              const timeLabel = FreeSlotDetector.minutesTo12Hour(currentMin);
               return `
-                <div class="time-tick" style="top: ${topPx}px;">
+                <div class="time-axis-tick" style="top: ${topPx}px;">
                   <span class="time-label">${timeLabel}</span>
                 </div>
               `;
             }).join('')}
           </div>
 
-          <!-- Main Days Grid -->
-          <div class="days-grid-container" style="height: ${canvasHeight}px;">
-            <!-- Grid Hour Horizontal Lines -->
+          <!-- Main Grid Area -->
+          <div class="grid-days-container" style="height: ${canvasHeight}px;">
+            <!-- Background Grid Lines -->
             <div class="grid-lines-layer">
               ${Array.from({ length: totalHours + 1 }).map((_, idx) => {
                 const topPx = idx * this.pixelsPerHour;
@@ -134,65 +78,85 @@ export class TimelineCanvas {
             </div>
 
             <!-- Day Columns -->
-            <div class="day-columns-row">
-              ${datesToDisplay.map(dateStr => {
-                const isToday = dateStr === new Date().toISOString().split('T')[0];
-                const daySlots = slots.filter(s => s.date === dateStr);
+            <div class="day-columns-layer">
+              ${activeDays.map(day => {
+                const dayClasses = classes.filter(c => c.day === day);
+                const dayStudySlots = scheduledStudySlots.filter(s => s.day === day);
+                const dayFreeSlots = freeSlots.filter(s => s.day === day);
 
                 return `
-                  <div class="day-column" data-date="${dateStr}" style="height: ${canvasHeight}px;">
-                    ${isToday ? `<div class="now-indicator-line" id="nowIndicator" style="display:none;"><div class="now-circle"></div></div>` : ''}
+                  <div class="day-grid-column" data-day="${day}" style="height: ${canvasHeight}px;">
 
-                    <!-- Scheduled Blocks in this column -->
-                    ${daySlots.map(slot => {
-                      const startMin = slot.startMinutes ?? Scheduler.timeToMinutes(slot.startTime);
-                      const endMin = slot.endMinutes ?? Scheduler.timeToMinutes(slot.endTime);
-                      const dur = endMin - startMin;
-
-                      const topOffset = (startMin - (startHour * 60)) * this.pixelsPerMinute;
-                      const blockHeight = Math.max(26, dur * this.pixelsPerMinute);
-                      const hasConflict = conflictMap.has(slot.id);
-
-                      const energyClass = `energy-${slot.energyLevel || 'deep'}`;
-                      const priorityClass = `priority-${slot.priority || 'medium'}`;
-                      const lockedClass = slot.isLocked ? 'is-locked' : 'is-unlocked';
-                      const conflictClass = hasConflict ? 'has-conflict' : '';
-
+                    <!-- Subtle Dashed Free Slot Placeholders -->
+                    ${dayFreeSlots.map(fSlot => {
+                      const topPx = (fSlot.startMinutes - startMin) * this.pixelsPerMinute;
+                      const heightPx = Math.max(20, fSlot.durationMinutes * this.pixelsPerMinute);
                       return `
-                        <div class="schedule-block ${energyClass} ${priorityClass} ${lockedClass} ${conflictClass}"
-                             id="slot_${slot.id}"
-                             data-slot-id="${slot.id}"
-                             data-start-min="${startMin}"
-                             data-end-min="${endMin}"
-                             data-date="${slot.date}"
-                             style="top: ${topOffset}px; height: ${blockHeight}px;">
-                          
-                          <!-- Progress Bar for Active Block -->
-                          <div class="block-progress-fill" id="progress_${slot.id}" style="width: 0%;"></div>
-
-                          <!-- Block Header -->
-                          <div class="block-header">
-                            <span class="block-title" title="${slot.title}">${slot.title}</span>
-                            <div class="block-badges">
-                              ${hasConflict ? '<span class="badge badge-conflict" title="Schedule Conflict!">⚠️ Conflict</span>' : ''}
-                              <button class="lock-btn" data-action="toggle-lock" data-slot-id="${slot.id}" title="${slot.isLocked ? 'Locked (Immovable in domino shifts)' : 'Unlocked (Can auto-cascade)'}">
-                                ${slot.isLocked ? '🔒' : '🔓'}
-                              </button>
-                            </div>
-                          </div>
-
-                          <!-- Block Meta -->
-                          <div class="block-meta">
-                            <span class="block-time">${slot.startTime} – ${slot.endTime}</span>
-                            <span class="block-category-chip">${slot.category || 'Study'}</span>
-                            ${slot.isChunk ? `<span class="badge badge-chunk">Part ${slot.chunkIndex}/${slot.totalChunks}</span>` : ''}
-                          </div>
-
-                          <!-- Bottom Resize Handle for visual duration stretching -->
-                          ${!slot.isLocked ? `<div class="block-resize-handle" data-slot-id="${slot.id}" title="Drag to adjust duration"></div>` : ''}
+                        <div class="free-slot-ghost" style="top: ${topPx}px; height: ${heightPx}px;" title="Available Free Time: ${fSlot.durationLabel}">
+                          <span class="free-ghost-label">Free ${fSlot.durationLabel}</span>
                         </div>
                       `;
                     }).join('')}
+
+                    <!-- 1. Fixed College Classes (Muted Slate / Locked) -->
+                    ${dayClasses.map(cls => {
+                      const cStart = FreeSlotDetector.timeToMinutes(cls.startTime);
+                      const cEnd = FreeSlotDetector.timeToMinutes(cls.endTime);
+                      const dur = cEnd - cStart;
+                      const topPx = (cStart - startMin) * this.pixelsPerMinute;
+                      const heightPx = Math.max(26, dur * this.pixelsPerMinute);
+
+                      return `
+                        <div class="timetable-block class-block"
+                             style="top: ${topPx}px; height: ${heightPx}px;"
+                             data-class-id="${cls.id}">
+                          <div class="block-top">
+                            <span class="block-name" title="${cls.title}">${cls.title}</span>
+                            <span class="lock-indicator" title="Fixed College Class">🔒 Locked</span>
+                          </div>
+                          <div class="block-info">
+                            <span class="block-time">${cls.startTime} – ${cls.endTime}</span>
+                            ${cls.room ? `<span class="room-chip">${cls.room}</span>` : ''}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+
+                    <!-- 2. Auto-Generated Study Slots (Vibrant Priority Badges) -->
+                    ${dayStudySlots.map(slot => {
+                      const sStart = slot.startMinutes;
+                      const sEnd = slot.endMinutes;
+                      const dur = sEnd - sStart;
+                      const topPx = (sStart - startMin) * this.pixelsPerMinute;
+                      const heightPx = Math.max(28, dur * this.pixelsPerMinute);
+                      const priorityClass = `priority-${(slot.priority || 'medium').toLowerCase()}`;
+                      const completedClass = slot.completed ? 'is-completed' : '';
+
+                      return `
+                        <div class="timetable-block study-block ${priorityClass} ${completedClass}"
+                             style="top: ${topPx}px; height: ${heightPx}px;"
+                             data-slot-id="${slot.id}"
+                             data-task-id="${slot.taskId}">
+                          <div class="block-top">
+                            <div class="study-title-group">
+                              <input type="checkbox"
+                                     class="slot-check"
+                                     ${slot.completed ? 'checked' : ''}
+                                     data-action="toggle-slot"
+                                     data-task-id="${slot.taskId}"
+                                     title="Mark Done">
+                              <span class="block-name" title="${slot.taskName}">${slot.taskName}</span>
+                            </div>
+                            <button class="slot-delete-btn" data-action="delete-slot" data-slot-id="${slot.id}" title="Remove this study block">&times;</button>
+                          </div>
+                          <div class="block-info">
+                            <span class="block-time">${slot.startTime} – ${slot.endTime}</span>
+                            <span class="priority-badge">${slot.priority}</span>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+
                   </div>
                 `;
               }).join('')}
@@ -201,193 +165,26 @@ export class TimelineCanvas {
         </div>
       </div>
     `;
-
-    this.updateNowIndicator();
-    this.updateActiveBlockProgress();
-  }
-
-  updateNowIndicator() {
-    const indicator = this.container.querySelector('#nowIndicator');
-    if (!indicator) return;
-
-    const state = this.store.getState();
-    const wakeMins = Scheduler.timeToMinutes(state.userProfile.wakeTime || '07:00');
-    const startHour = Math.max(0, Math.floor(wakeMins / 60) - 1);
-
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    const topPx = (currentMins - (startHour * 60)) * this.pixelsPerMinute;
-
-    indicator.style.top = `${topPx}px`;
-    indicator.style.display = 'block';
-  }
-
-  updateActiveBlockProgress() {
-    const state = this.store.getState();
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-
-    for (const slot of state.slots) {
-      const progressEl = this.container.querySelector(`#progress_${slot.id}`);
-      if (!progressEl) continue;
-
-      if (slot.date === todayStr && currentMins >= slot.startMinutes && currentMins <= slot.endMinutes) {
-        const totalDur = slot.endMinutes - slot.startMinutes;
-        const elapsed = currentMins - slot.startMinutes;
-        const pct = Math.min(100, Math.max(0, Math.round((elapsed / totalDur) * 100)));
-        progressEl.style.width = `${pct}%`;
-        progressEl.closest('.schedule-block')?.classList.add('is-currently-active');
-      } else {
-        progressEl.style.width = '0%';
-        progressEl.closest('.schedule-block')?.classList.remove('is-currently-active');
-      }
-    }
   }
 
   setupEventListeners() {
-    // 1. Click handling for lock toggle and day header selection
     this.container.addEventListener('click', (e) => {
-      const lockBtn = e.target.closest('[data-action="toggle-lock"]');
-      if (lockBtn) {
+      // Toggle completion checkbox
+      const check = e.target.closest('[data-action="toggle-slot"]');
+      if (check) {
         e.stopPropagation();
-        const slotId = lockBtn.dataset.slotId;
-        this.store.toggleSlotLock(slotId);
+        const taskId = check.dataset.taskId;
+        this.store.toggleTaskComplete(taskId);
         return;
       }
 
-      const dayHeader = e.target.closest('.day-col-header');
-      if (dayHeader) {
-        const date = dayHeader.dataset.date;
-        if (date) {
-          this.store.setSelectedDate(date);
-        }
+      // Delete study slot
+      const deleteBtn = e.target.closest('[data-action="delete-slot"]');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const slotId = deleteBtn.dataset.slotId;
+        this.store.removeScheduledSlot(slotId);
       }
     });
-
-    // 2. Drag & Drop Movement and Stretch Resizing
-    this.container.addEventListener('mousedown', (e) => {
-      const resizeHandle = e.target.closest('.block-resize-handle');
-      if (resizeHandle) {
-        this._startResize(e, resizeHandle.dataset.slotId);
-        return;
-      }
-
-      const block = e.target.closest('.schedule-block');
-      if (block && !block.classList.contains('is-locked')) {
-        // Prevent drag on lock button click
-        if (e.target.closest('button')) return;
-        this._startDrag(e, block.dataset.slotId, block);
-      }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (this.dragState) {
-        this._handlePointerMove(e);
-      }
-    });
-
-    window.addEventListener('mouseup', (e) => {
-      if (this.dragState) {
-        this._handlePointerUp(e);
-      }
-    });
-  }
-
-  _startDrag(e, slotId, blockEl) {
-    e.preventDefault();
-    const state = this.store.getState();
-    const slot = state.slots.find(s => s.id === slotId);
-    if (!slot) return;
-
-    const blockRect = blockEl.getBoundingClientRect();
-    const offsetY = e.clientY - blockRect.top;
-
-    this.dragState = {
-      type: 'MOVE',
-      slotId,
-      initialStartMin: slot.startMinutes,
-      duration: slot.duration || (slot.endMinutes - slot.startMinutes),
-      offsetY,
-      blockEl,
-      currentDay: slot.date
-    };
-
-    blockEl.classList.add('is-dragging');
-  }
-
-  _startResize(e, slotId) {
-    e.preventDefault();
-    e.stopPropagation();
-    const state = this.store.getState();
-    const slot = state.slots.find(s => s.id === slotId);
-    if (!slot) return;
-
-    this.dragState = {
-      type: 'RESIZE',
-      slotId,
-      startMin: slot.startMinutes,
-      initialEndMin: slot.endMinutes,
-      blockEl: this.container.querySelector(`#slot_${slotId}`)
-    };
-
-    this.dragState.blockEl?.classList.add('is-resizing');
-  }
-
-  _handlePointerMove(e) {
-    if (!this.dragState) return;
-
-    const state = this.store.getState();
-    const wakeMins = Scheduler.timeToMinutes(state.userProfile.wakeTime || '07:00');
-    const startHour = Math.max(0, Math.floor(wakeMins / 60) - 1);
-
-    if (this.dragState.type === 'MOVE') {
-      const dayCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
-      const targetDate = dayCol ? dayCol.dataset.date : this.dragState.currentDay;
-
-      const columnRect = (dayCol || this.dragState.blockEl.parentElement).getBoundingClientRect();
-      const relativeY = e.clientY - columnRect.top - this.dragState.offsetY;
-
-      // Calculate minutes with magnetic 15m snapping
-      const rawMinutes = (relativeY / this.pixelsPerMinute) + (startHour * 60);
-      const snappedStart = Math.max(0, Math.min(24 * 60 - this.dragState.duration, Math.round(rawMinutes / this.gridSnapMinutes) * this.gridSnapMinutes));
-      const topPx = (snappedStart - (startHour * 60)) * this.pixelsPerMinute;
-
-      this.dragState.blockEl.style.top = `${topPx}px`;
-      this.dragState.pendingStart = snappedStart;
-      this.dragState.pendingDate = targetDate;
-    }
-
-    if (this.dragState.type === 'RESIZE') {
-      const columnRect = this.dragState.blockEl.parentElement.getBoundingClientRect();
-      const relativeY = e.clientY - columnRect.top;
-
-      const rawEndMinutes = (relativeY / this.pixelsPerMinute) + (startHour * 60);
-      const snappedEnd = Math.max(this.dragState.startMin + 15, Math.min(24 * 60, Math.round(rawEndMinutes / this.gridSnapMinutes) * this.gridSnapMinutes));
-
-      const newHeight = (snappedEnd - this.dragState.startMin) * this.pixelsPerMinute;
-      this.dragState.blockEl.style.height = `${newHeight}px`;
-      this.dragState.pendingEnd = snappedEnd;
-    }
-  }
-
-  _handlePointerUp() {
-    if (!this.dragState) return;
-
-    if (this.dragState.type === 'MOVE') {
-      this.dragState.blockEl.classList.remove('is-dragging');
-      if (this.dragState.pendingStart !== undefined) {
-        this.store.moveSlot(this.dragState.slotId, this.dragState.pendingStart, this.dragState.pendingDate);
-      }
-    }
-
-    if (this.dragState.type === 'RESIZE') {
-      this.dragState.blockEl.classList.remove('is-resizing');
-      if (this.dragState.pendingEnd !== undefined) {
-        this.store.resizeSlot(this.dragState.slotId, this.dragState.pendingEnd);
-      }
-    }
-
-    this.dragState = null;
   }
 }

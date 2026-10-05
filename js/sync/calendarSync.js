@@ -7,7 +7,7 @@
  * 4. Conflict detection shader data provider
  */
 
-import { Scheduler } from '../engine/scheduler.js';
+import { FreeSlotDetector } from '../engine/freeSlotDetector.js';
 
 export class CalendarSync {
   /**
@@ -106,7 +106,7 @@ export class CalendarSync {
       const startTime = `${startH}:${startMin}`;
       const startMinutes = parseInt(startH, 10) * 60 + parseInt(startMin, 10);
 
-      let endTime = Scheduler.minutesToTime(startMinutes + 60);
+      let endTime = FreeSlotDetector.minutesToTime(startMinutes + 60);
       let endMinutes = startMinutes + 60;
 
       if (dtEndMatch) {
@@ -151,15 +151,15 @@ export class CalendarSync {
 
     for (let i = 0; i < slots.length; i++) {
       const s1 = slots[i];
-      const s1Start = s1.startMinutes ?? Scheduler.timeToMinutes(s1.startTime);
-      const s1End = s1.endMinutes ?? Scheduler.timeToMinutes(s1.endTime);
+      const s1Start = s1.startMinutes ?? FreeSlotDetector.timeToMinutes(s1.startTime);
+      const s1End = s1.endMinutes ?? FreeSlotDetector.timeToMinutes(s1.endTime);
 
       for (let j = i + 1; j < slots.length; j++) {
         const s2 = slots[j];
         if (s1.date !== s2.date) continue;
 
-        const s2Start = s2.startMinutes ?? Scheduler.timeToMinutes(s2.startTime);
-        const s2End = s2.endMinutes ?? Scheduler.timeToMinutes(s2.endTime);
+        const s2Start = s2.startMinutes ?? FreeSlotDetector.timeToMinutes(s2.startTime);
+        const s2End = s2.endMinutes ?? FreeSlotDetector.timeToMinutes(s2.endTime);
 
         // Check if intervals overlap
         if (Math.max(s1Start, s2Start) < Math.min(s1End, s2End)) {
